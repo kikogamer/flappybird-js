@@ -1,7 +1,10 @@
 console.log('(Kikogamer) Flappy Bird');
 
+const hitSound = new Audio();
+hitSound.src = './efeitos/hit.wav';
+
 const sprites = new Image();
-sprites.src = './sprites.png'
+sprites.src = './sprites.png';
 
 const canvas = document.querySelector('canvas');
 const contexto = canvas.getContext('2d');
@@ -63,30 +66,56 @@ const floor = {
   }
 };
 
-const flappyBird = {
-  sourceX: 0,
-  sourceY: 0,
-  width: 33,
-  height: 24,
-  x: 10,
-  y: 50,
-  gravity: 0.25,
-  velocity: 0,
+const clashedWithFloor = (flappyBird, floor) => {
+  const flappyBirdY = flappyBird.y + flappyBird.height;
+  
+  if (flappyBirdY >= floor.y) {
+    return true;
+  };
 
-  draw() {
-    contexto.drawImage(
-      sprites,
-      flappyBird.sourceX, flappyBird.sourceY, //sprite x,y
-      flappyBird.width, flappyBird.height, // size
-      flappyBird.x, flappyBird.y, // canvas position
-      flappyBird.width, flappyBird.height // draw canvas size
-    );
-  },
+  return false;
+};
 
-  update() {
-    flappyBird.velocity += flappyBird.gravity;
-    flappyBird.y += flappyBird.velocity;
-  }
+function buildFlappyBird() {
+  const flappyBird = {
+    sourceX: 0,
+    sourceY: 0,
+    width: 33,
+    height: 24,
+    x: 10,
+    y: 50,
+    gravity: 0.25,
+    velocity: 0.0,
+    jumpSize: 4.6,
+  
+    draw() {
+      contexto.drawImage(
+        sprites,
+        flappyBird.sourceX, flappyBird.sourceY, //sprite x,y
+        flappyBird.width, flappyBird.height, // size
+        flappyBird.x, flappyBird.y, // canvas position
+        flappyBird.width, flappyBird.height // draw canvas size
+      );
+    },
+  
+    jump() {
+      flappyBird.velocity = - flappyBird.jumpSize;
+    },
+  
+    update() {
+      if (clashedWithFloor(flappyBird, floor)) {
+        hitSound.play();
+
+        setTimeout(() => changeScreen(screens.START), 500);        
+        return;
+      };
+  
+      flappyBird.velocity += flappyBird.gravity;
+      flappyBird.y += flappyBird.velocity;
+    }
+  };
+
+  return flappyBird;
 };
 
 const messageGetReady = {
@@ -108,9 +137,16 @@ const messageGetReady = {
   }
 };
 
+const globais = {};
 let activeScreen = {};
 
-const changeScreen = (newScreen) => activeScreen = newScreen;
+const changeScreen = (newScreen) => {
+  activeScreen = newScreen;
+
+  if (activeScreen.initialize) {
+    activeScreen.initialize();
+  };
+};
 
 const screens = {
   START: {
@@ -119,9 +155,12 @@ const screens = {
     },
     draw() {
       background.draw();
-      flappyBird.draw();
+      globais.flappyBird.draw();
       floor.draw();
       messageGetReady.draw();
+    },
+    initialize() {
+      globais.flappyBird = buildFlappyBird();
     },
     update() {
 
@@ -130,13 +169,16 @@ const screens = {
 };
 
 screens.GAME = {
+  click() {
+    globais.flappyBird.jump();
+  },
   draw() {
     background.draw();
-    flappyBird.draw();
+    globais.flappyBird.draw();
     floor.draw();
   },
   update() {
-    flappyBird.update();
+    globais.flappyBird.update();
   }
 }
 
