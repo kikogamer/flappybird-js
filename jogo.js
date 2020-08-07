@@ -1,7 +1,17 @@
 console.log('(Kikogamer) Flappy Bird');
 
+let frames = 0;
 const hitSound = new Audio();
 hitSound.src = './efeitos/hit.wav';
+
+const fallSound = new Audio();
+fallSound.src = './efeitos/caiu.wav';
+
+const jumpSound = new Audio();
+jumpSound.src = './efeitos/pulo.wav';
+
+const gameAudio = new Audio();
+gameAudio.src = './efeitos/game-music.mp3';
 
 const sprites = new Image();
 sprites.src = './sprites.png';
@@ -39,32 +49,43 @@ const background = {
   }
 };
 
-const floor = {
-  sourceX: 0,
-  sourceY: 610,
-  width: 224,
-  height: 112,
-  x: 0,
-  y: canvas.height - 112,
+function buildFloor() {
+  const floor = {
+    sourceX: 0,
+    sourceY: 610,
+    width: 224,
+    height: 112,
+    x: 0,
+    y: canvas.height - 112,
+  
+    draw() {
+      contexto.drawImage(
+        sprites,
+        floor.sourceX, floor.sourceY,
+        floor.width, floor.height,
+        floor.x, floor.y,
+        floor.width, floor.height
+      );
+  
+      contexto.drawImage(
+        sprites,
+        floor.sourceX, floor.sourceY,
+        floor.width, floor.height,
+        (floor.x + floor.width), floor.y,
+        floor.width, floor.height
+      );
+    },
+    update() {
+      const floorMovement = 1;
+      const repeatIn = floor.width / 2;
+      const movement = floor.x - floorMovement;
 
-  draw() {
-    contexto.drawImage(
-      sprites,
-      floor.sourceX, floor.sourceY,
-      floor.width, floor.height,
-      floor.x, floor.y,
-      floor.width, floor.height
-    );
+      floor.x = movement % repeatIn;
+    }
+  };
 
-    contexto.drawImage(
-      sprites,
-      floor.sourceX, floor.sourceY,
-      floor.width, floor.height,
-      (floor.x + floor.width), floor.y,
-      floor.width, floor.height
-    );
-  }
-};
+  return floor;
+}
 
 const clashedWithFloor = (flappyBird, floor) => {
   const flappyBirdY = flappyBird.y + flappyBird.height;
@@ -87,11 +108,22 @@ function buildFlappyBird() {
     gravity: 0.25,
     velocity: 0.0,
     jumpSize: 4.6,
-  
+    activeFrame: 0,
+
+    movements: [
+      { sourceX: 0, sourceY: 0 },
+      { sourceX: 0, sourceY: 26 },
+      { sourceX: 0, sourceY: 52 }
+    ],
+
     draw() {
+      flappyBird.updateActiveFrame();
+      
+      const { sourceX, sourceY } = flappyBird.movements[flappyBird.activeFrame];
+
       contexto.drawImage(
         sprites,
-        flappyBird.sourceX, flappyBird.sourceY, //sprite x,y
+        sourceX, sourceY, //sprite x,y
         flappyBird.width, flappyBird.height, // size
         flappyBird.x, flappyBird.y, // canvas position
         flappyBird.width, flappyBird.height // draw canvas size
@@ -99,12 +131,13 @@ function buildFlappyBird() {
     },
   
     jump() {
+      jumpSound.play();
       flappyBird.velocity = - flappyBird.jumpSize;
     },
   
     update() {
-      if (clashedWithFloor(flappyBird, floor)) {
-        hitSound.play();
+      if (clashedWithFloor(flappyBird, globais.floor)) {
+        fallSound.play();
 
         setTimeout(() => changeScreen(screens.START), 500);        
         return;
@@ -112,10 +145,123 @@ function buildFlappyBird() {
   
       flappyBird.velocity += flappyBird.gravity;
       flappyBird.y += flappyBird.velocity;
+    },
+
+    updateActiveFrame() {
+      const frameInterval = 10;
+
+      if (frames % frameInterval === 0) {
+        const incrementBase = 1;
+        const increment = incrementBase + flappyBird.activeFrame;
+        const repeatBase = flappyBird.movements.length;
+        flappyBird.activeFrame = increment % repeatBase;
+      }
     }
   };
 
   return flappyBird;
+};
+
+function buildTubes() {
+  const tubes = {
+    floor: {
+      sourceX: 0,
+      sourceY: 169
+    },
+    height: 400,
+    pairs: [],
+    sky: {
+      sourceX: 52,
+      sourceY: 169
+    },
+    space: 80,
+    width: 52,
+    
+    clashedWithFlappyBird(pair) {
+      const flappyBirdHead = globais.flappyBird.y;
+      const flappyBirdFoot = globais.flappyBird.y + globais.flappyBird.height;
+
+      if (globais.flappyBird.x >= pair.x) {
+        
+        if (flappyBirdHead <= pair.skyTube.y) {
+          return true;
+        }
+
+        if (flappyBirdFoot >= pair.floorTube.y) {
+          return true;
+        }
+      }
+      
+      return false;
+    },
+
+    draw() {
+      
+      tubes.pairs.forEach(function (pair) {
+        const yRandom = pair.y;
+        const spacingBetweenTubes = 90;
+  
+        const skyTubeX = pair.x;
+        const skyTubeY = yRandom;
+        
+        contexto.drawImage(
+          sprites,
+          tubes.sky.sourceX, tubes.sky.sourceY,
+          tubes.width, tubes.height,
+          skyTubeX, skyTubeY,
+          tubes.width, tubes.height
+        );
+  
+        const floorTubeX = pair.x;
+        const floorTubeY = tubes.height + spacingBetweenTubes + yRandom;
+  
+        contexto.drawImage(
+          sprites,
+          tubes.floor.sourceX, tubes.floor.sourceY,
+          tubes.width, tubes.height,
+          floorTubeX, floorTubeY,
+          tubes.width, tubes.height
+        );
+
+        pair.skyTube = {
+          x: skyTubeX,
+          y: tubes.height + skyTubeY
+        },
+
+        pair.floorTube = {
+          x: floorTubeX,
+          y: floorTubeY
+        }
+      });
+
+    },
+
+    update() {
+      const cemFramesPassed = frames % 100 === 0;
+
+      if (cemFramesPassed) {
+        tubes.pairs.push({
+          x: canvas.width,
+          y: -150 * (Math.random() + 1)      
+        });
+      };
+
+      tubes.pairs.forEach(function (pair) {
+        pair.x += -2;
+
+        if (tubes.clashedWithFlappyBird(pair)) {
+          hitSound.play();
+          changeScreen(screens.START);
+        };
+
+        if (pair.x + tubes.width <= 0) {
+          tubes.pairs.shift();
+        }
+      });
+    }
+  }
+
+  return tubes;
 };
 
 const messageGetReady = {
@@ -141,6 +287,10 @@ const globais = {};
 let activeScreen = {};
 
 const changeScreen = (newScreen) => {
+  if (activeScreen.finalize) {
+    activeScreen.finalize();
+  }; 
+
   activeScreen = newScreen;
 
   if (activeScreen.initialize) {
@@ -156,14 +306,17 @@ const screens = {
     draw() {
       background.draw();
       globais.flappyBird.draw();
-      floor.draw();
+      globais.tubes.draw();
+      globais.floor.draw();
       messageGetReady.draw();
     },
     initialize() {
       globais.flappyBird = buildFlappyBird();
+      globais.floor = buildFloor();
+      globais.tubes = buildTubes();
     },
     update() {
-
+      globais.floor.update();
     }
   }
 };
@@ -172,12 +325,23 @@ screens.GAME = {
   click() {
     globais.flappyBird.jump();
   },
+  finalize() {
+    gameAudio.pause();
+    gameAudio.currentTime = 0;
+  },
+  initialize() {
+    gameAudio.loop = true;
+    gameAudio.play();
+  },
   draw() {
     background.draw();
+    globais.tubes.draw();
+    globais.floor.draw();
     globais.flappyBird.draw();
-    floor.draw();
   },
   update() {
+    globais.tubes.update();
+    globais.floor.update();
     globais.flappyBird.update();
   }
 }
@@ -186,6 +350,8 @@ function loop() {
   
   activeScreen.draw();
   activeScreen.update();
+
+  frames += 1;
   
   requestAnimationFrame(loop);
 };
