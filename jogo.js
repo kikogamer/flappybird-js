@@ -13,11 +13,16 @@ jumpSound.src = './efeitos/pulo.wav';
 const gameAudio = new Audio();
 gameAudio.src = './efeitos/game-music.mp3';
 
+const pointSound = new Audio();
+pointSound.src = './efeitos/ponto.wav';
+
 const sprites = new Image();
 sprites.src = './sprites.png';
 
 const canvas = document.querySelector('canvas');
 const contexto = canvas.getContext('2d');
+
+const scoreElement = document.getElementById('score');
 
 const background = {
   sourceX: 390,
@@ -105,9 +110,9 @@ function buildFlappyBird() {
     height: 24,
     x: 10,
     y: 50,
-    gravity: 0.25,
+    gravity: 0.2,
     velocity: 0.0,
-    jumpSize: 4.6,
+    jumpSize: 4.0,
     activeFrame: 0,
 
     movements: [
@@ -255,6 +260,8 @@ function buildTubes() {
         };
 
         if (pair.x + tubes.width <= 0) {
+          globais.score.value += 10;
+          pointSound.play();
           tubes.pairs.shift();
         }
       });
@@ -263,6 +270,23 @@ function buildTubes() {
 
   return tubes;
 };
+
+function buildScore() {
+
+  const score = {
+    value: 0,
+  
+    draw() {
+      contexto.fillStyle="#FFF";
+      contexto.font="35px Ubuntu";
+      contexto.textAlign="right";
+      contexto.textBaseline="top";
+      contexto.fillText(score.value.toString().padStart(6, '0'), 320, 0); 
+    }
+  }
+
+  return score;
+}
 
 const messageGetReady = {
   sourceX: 134,
@@ -314,6 +338,7 @@ const screens = {
       globais.flappyBird = buildFlappyBird();
       globais.floor = buildFloor();
       globais.tubes = buildTubes();
+      globais.score = buildScore();
     },
     update() {
       globais.floor.update();
@@ -338,6 +363,7 @@ screens.GAME = {
     globais.tubes.draw();
     globais.floor.draw();
     globais.flappyBird.draw();
+    globais.score.draw();
   },
   update() {
     globais.tubes.update();
